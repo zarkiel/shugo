@@ -1,0 +1,16 @@
+repositories:
+    zarkiel/SESSION:
+        path: "/var/www/html/SESSION"
+        branch: "master"
+    zarkiel/MODULES:
+        path: "/var/www/html/MODULES"
+        branch: "master"
+    zarkiel/USERS:
+        path: "/var/www/html/USERS"
+        branch: "master"
+    zarkiel/ROLES:
+        path: "/var/www/html/ROLES"
+        branch: "master"
+    zarkiel/EMAIL:
+        path: "/var/www/html/EMAIL"
+        branch: "master"
