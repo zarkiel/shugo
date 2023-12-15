@@ -1,6 +1,7 @@
 require 'fileutils'
 require 'yaml'
 require 'openssl'
+require 'http'
 
 module Zarkiel
     class Shugo
@@ -8,7 +9,8 @@ module Zarkiel
             raise StandardError.new "No config found" if !File.exists? "config.yml"
             @request = request
             @body = request.body.read
-            @repositories = YAML.load_file("config.yml")["repositories"]
+            @config = YAML.load_file("config.yml")
+            @repositories = @config["repositories"]
             @data = JSON.parse(@body)
         end
 
@@ -20,7 +22,7 @@ module Zarkiel
             user = ENV["USER"]
             if !File.exists? path
                 system "sudo mkdir #{path}"
-                system "sudo chown -R #{user}:#{user} #{path}"
+                #system "sudo chown -R #{user}:#{user} #{path}"
             end
         end
 
@@ -30,7 +32,7 @@ module Zarkiel
 
         def deploy(tmp_path, deploy_path, branch)
             if File.exists? tmp_path
-                system "git --git-dir=#{tmp_path} --work-tree=#{deploy_path} checkout #{branch} ."  
+                system "sudo git --git-dir=#{tmp_path} --work-tree=#{deploy_path} checkout #{branch} ."  
              end
         end
 
@@ -42,10 +44,7 @@ module Zarkiel
         end
 
         def clone_repository(url, name)
-            system("
-                    cd ./tmp
-                    git clone --bare #{url} #{name}
-                ")
+            system("git clone --bare #{url} ./tmp/#{name}")
         end
 
         def deliver
@@ -53,7 +52,6 @@ module Zarkiel
 
             if !@data["repository"].nil? && !@data["repository"]["name"].nil?
                 repository = @data["repository"]
-                clone_url = repository["clone_url"]
                 name = repository["name"]
                 tmp_path = "./tmp/#{name}"
                 
@@ -61,9 +59,10 @@ module Zarkiel
                 clean tmp_path
                 
                 if @repositories.key? repository["full_name"]
+                    clone_url = @repositories[repository["full_name"]]["clone_url"]
                     deploy_path = @repositories[repository["full_name"]]["path"]
                     branch = @repositories[repository["full_name"]]["branch"]
-                    
+
                     make_deploy_path(deploy_path)
                     clone_repository(clone_url, name)
                     deploy(tmp_path, deploy_path, branch)
@@ -73,6 +72,16 @@ module Zarkiel
             end
 
             return ""
+        end
+
+        def relay
+            unless @config["relay"].nil?
+                @config["relay"].each do |relay_url|
+                    HTTP.post(relay_url, body: @body, headers: {
+                        "X-Gitea-Signature" => @request.env["HTTP_X_GITEA_SIGNATURE"]
+                    })
+                end
+            end
         end
 
         def run_after(deploy_path)

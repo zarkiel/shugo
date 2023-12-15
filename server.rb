@@ -5,6 +5,7 @@ require './shugo'
 set :default_content_type, :json
 
 post '/' do
-    shugo = Zarkiel::Sugo.new(request)
+    shugo = Zarkiel::Shugo.new(request)
     shugo.deliver
+    shugo.relay
 end
