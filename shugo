@@ -1,0 +1,31 @@
+#!/usr/bin/ruby
+args = ARGV
+
+if args.length > 0
+    
+    case args[0]
+        when "server"
+            require 'sinatra'
+            require 'json'
+            require File.expand_path("lib/request_handler", File.dirname(__FILE__))
+
+            set :default_content_type, :json
+            set :port, 4567
+
+            post '/' do
+                begin
+                    shugo = Zarkiel::Shugo::RequestHandler.new(request)
+                    shugo.deliver
+                    shugo.relay
+
+                    JSON.generate({status: "OK"})
+                rescue => error
+                    JSON.generate({status: "ERROR", message: error.message})
+                end    
+            end
+        when "setup"
+            require File.expand_path("lib/deployer", File.dirname(__FILE__))
+            Zarkiel::Shugo::Deployer.new.deploy_all
+
+    end
+end
