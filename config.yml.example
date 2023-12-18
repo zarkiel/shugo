@@ -1,0 +1,9 @@
+sudo: true
+relay:
+    - http://another-server/deploy
+repositories:
+    user/repository:
+        path: "/path-to-deploy"
+        clone_url: "http://clone_url"
+        branch: "master"
+        
