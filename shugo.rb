@@ -2,6 +2,7 @@ require 'fileutils'
 require 'yaml'
 require 'openssl'
 require 'http'
+require 'json'
 
 module Zarkiel
     class Shugo
@@ -14,6 +15,18 @@ module Zarkiel
             @data = JSON.parse(@body)
         end
 
+        def authorize
+            key = ENV["key"] || ""
+            signature = @request.env["HTTP_X_GITEA_SIGNATURE"]
+            local_signature = OpenSSL::HMAC.hexdigest("SHA256", key, @body)
+            raise StandardError.new "Invalid Request" if signature != local_signature
+        end
+
+        def build_command(command)
+            command = command.prepend("sudo ") if @config["sudo"]
+            command
+        end
+
         def clean(path)
             FileUtils.rm_rf path if File.exists? path
         end
@@ -21,7 +34,7 @@ module Zarkiel
         def make_deploy_path(path)
             user = ENV["USER"]
             if !File.exists? path
-                system "sudo mkdir #{path}"
+                system build_command("mkdir #{path}")
                 #system "sudo chown -R #{user}:#{user} #{path}"
             end
         end
@@ -32,19 +45,12 @@ module Zarkiel
 
         def deploy(tmp_path, deploy_path, branch)
             if File.exists? tmp_path
-                system "sudo git --git-dir=#{tmp_path} --work-tree=#{deploy_path} checkout #{branch} ."  
+                system build_command("git --git-dir=#{tmp_path} --work-tree=#{deploy_path} checkout #{branch} .")
              end
         end
 
-        def authorize
-            key = ENV["key"] || ""
-            signature = @request.env["HTTP_X_GITEA_SIGNATURE"]
-            local_signature = OpenSSL::HMAC.hexdigest("SHA256", key, @body)
-            raise StandardError.new "Invalid Request" if signature != local_signature
-        end
-
         def clone_repository(url, name)
-            system("git clone --bare #{url} ./tmp/#{name}")
+            system "git clone --bare #{url} ./tmp/#{name}"
         end
 
         def deliver
@@ -56,7 +62,7 @@ module Zarkiel
                 tmp_path = "./tmp/#{name}"
                 
                 make_tmp_path
-                clean tmp_path
+                clean(tmp_path)
                 
                 if @repositories.key? repository["full_name"]
                     clone_url = @repositories[repository["full_name"]]["clone_url"]
@@ -70,8 +76,6 @@ module Zarkiel
                     clean(tmp_path)
                 end
             end
-
-            return ""
         end
 
         def relay
@@ -88,7 +92,7 @@ module Zarkiel
             if File.exists? "#{deploy_path}/composer.json"
                 system("
                     cd #{deploy_path}
-                    composer install
+                    #{build_command("composer install")}
                 ")
             end
         end
