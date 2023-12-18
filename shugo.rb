@@ -35,8 +35,12 @@ module Zarkiel
             user = ENV["USER"]
             if !File.exists? path
                 system build_command("mkdir #{path}")
-                #system "sudo chown -R #{user}:#{user} #{path}"
+                system(build_command("chown -R #{user}:#{user} #{path}")) if @config["sudo"]
             end
+        end
+
+        def rollback_permissions(path)
+            system(build_command("chown -R root:root #{path}")) if @config["sudo"]
         end
 
         def make_tmp_path
@@ -73,6 +77,7 @@ module Zarkiel
                     clone_repository(clone_url, name)
                     deploy(tmp_path, deploy_path, branch)
                     run_after(deploy_path)
+                    rollback_permissions(deploy_path)
                     clean(tmp_path)
                 end
             end
@@ -92,7 +97,7 @@ module Zarkiel
             if File.exists? "#{deploy_path}/composer.json"
                 system("
                     cd #{deploy_path}
-                    #{build_command("composer install")}
+                    composer install
                 ")
             end
         end
