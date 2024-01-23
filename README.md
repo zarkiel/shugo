@@ -4,10 +4,15 @@ This tool will help you to automate deployments by using Web Hooks
 
 ## Requirements
 - Ruby 3.0+
+- Git
 
 Install required gems
 
 `bundle install`
+
+Save credentials of the deploy user
+
+    git config --global credential.helper store
 
 ## Configuration
 
