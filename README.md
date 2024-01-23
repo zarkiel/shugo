@@ -8,7 +8,7 @@ This tool will help you to automate deployments by using Web Hooks
 
 Install required gems
 
-`bundle install`
+    bundle install
 
 Save credentials of the deploy user
 
